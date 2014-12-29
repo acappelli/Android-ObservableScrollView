@@ -34,12 +34,14 @@ import com.github.ksoichiro.android.observablescrollview.Scrollable;
 import com.github.ksoichiro.android.observablescrollview.TouchInterceptionFrameLayout;
 import com.nineoldandroids.animation.ValueAnimator;
 import com.nineoldandroids.view.ViewHelper;
+import com.nineoldandroids.view.ViewPropertyAnimator;
 
 public abstract class SlidingUpBaseActivity<S extends Scrollable> extends ActionBarActivity implements ObservableScrollViewCallbacks {
 
     private View mHeader;
     private TextView mTitle;
     private View mImageView;
+    private View mFab;
     private S mScrollable;
     private TouchInterceptionFrameLayout mInterceptionLayout;
     private int mActionBarSize;
@@ -50,12 +52,18 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
     private boolean mMoved;
     private float mInitialY;
     private float mMovedDistanceY;
+    private int mFabMargin;
+    private boolean mFabIsShown;
+    private int mFlexibleSpaceShowFabOffset;
+    private int mFlexibleSpaceImageHeight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(getLayoutResId());
 
+        mFlexibleSpaceImageHeight = getResources().getDimensionPixelSize(R.dimen.flexible_space_image_height);
+        mFlexibleSpaceShowFabOffset = getResources().getDimensionPixelSize(R.dimen.flexible_space_show_fab_offset);
         mIntersectionHeight = getResources().getDimensionPixelSize(R.dimen.intersection_height);
         mHeaderBarHeight = getResources().getDimensionPixelSize(R.dimen.header_bar_height);
         mSlidingSlop = getResources().getDimensionPixelSize(R.dimen.sliding_slop);
@@ -70,6 +78,10 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
             }
         });
         mScrollable = createScrollable();
+
+        mFab = findViewById(R.id.fab);
+        mFabMargin = getResources().getDimensionPixelSize(R.dimen.margin_standard);
+        mFabIsShown = true;
 
         mInterceptionLayout = (TouchInterceptionFrameLayout) findViewById(R.id.scroll_wrapper);
         mInterceptionLayout.setScrollInterceptionListener(mInterceptionListener);
@@ -88,6 +100,10 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
                 }
                 ViewHelper.setTranslationY(mInterceptionLayout, getScreenHeight() - mHeaderBarHeight);
                 ViewHelper.setTranslationY(mImageView, getScreenHeight() - mHeaderBarHeight);
+                if (mFab != null) {
+                    ViewHelper.setTranslationX(mFab, mTitle.getWidth() - mFabMargin - mFab.getWidth());
+                    ViewHelper.setTranslationY(mFab, ViewHelper.getX(mTitle) - (mFab.getHeight() / 2));
+                }
             }
         });
     }
@@ -218,6 +234,15 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
         float imageTranslationScale = imageAnimatableHeight / (imageAnimatableHeight - mImageView.getHeight());
         float imageTranslationY = Math.max(0, imageAnimatableHeight - (imageAnimatableHeight - translationY) * imageTranslationScale);
         ViewHelper.setTranslationY(mImageView, imageTranslationY);
+
+        // Show/hide FAB
+        if (mFab != null) {
+            if (ViewHelper.getTranslationY(mInterceptionLayout) < mFlexibleSpaceImageHeight) {
+                hideFab();
+            } else {
+                showFab();
+            }
+        }
     }
 
     private void slideWithAnimation(float toY) {
@@ -254,5 +279,21 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
 
     private int getScreenHeight() {
         return findViewById(android.R.id.content).getHeight();
+    }
+
+    private void showFab() {
+        if (!mFabIsShown) {
+            ViewPropertyAnimator.animate(mFab).cancel();
+            ViewPropertyAnimator.animate(mFab).scaleX(1).scaleY(1).setDuration(200).start();
+            mFabIsShown = true;
+        }
+    }
+
+    private void hideFab() {
+        if (mFabIsShown) {
+            ViewPropertyAnimator.animate(mFab).cancel();
+            ViewPropertyAnimator.animate(mFab).scaleX(0).scaleY(0).setDuration(200).start();
+            mFabIsShown = false;
+        }
     }
 }
