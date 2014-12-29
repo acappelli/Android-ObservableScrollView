@@ -17,10 +17,13 @@
 package com.github.ksoichiro.android.observablescrollview.samples;
 
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
@@ -32,9 +35,12 @@ import com.github.ksoichiro.android.observablescrollview.ObservableScrollViewCal
 import com.github.ksoichiro.android.observablescrollview.ScrollState;
 import com.github.ksoichiro.android.observablescrollview.Scrollable;
 import com.github.ksoichiro.android.observablescrollview.TouchInterceptionFrameLayout;
+import com.nineoldandroids.animation.ObjectAnimator;
 import com.nineoldandroids.animation.ValueAnimator;
 import com.nineoldandroids.view.ViewHelper;
 import com.nineoldandroids.view.ViewPropertyAnimator;
+
+import org.w3c.dom.Text;
 
 public abstract class SlidingUpBaseActivity<S extends Scrollable> extends ActionBarActivity implements ObservableScrollViewCallbacks {
 
@@ -42,6 +48,7 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
     private TextView mTitle;
     private View mImageView;
     private View mFab;
+    private Toolbar mToolbar;
     private S mScrollable;
     private TouchInterceptionFrameLayout mInterceptionLayout;
     private int mActionBarSize;
@@ -54,16 +61,25 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
     private float mMovedDistanceY;
     private int mFabMargin;
     private boolean mFabIsShown;
-    private int mFlexibleSpaceShowFabOffset;
     private int mFlexibleSpaceImageHeight;
+    private int mToolbarColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(getLayoutResId());
 
+        mToolbar = (Toolbar) findViewById(R.id.toolbar);
+
+        setSupportActionBar(mToolbar);
+        ViewHelper.setScaleY(mToolbar, 0);
+        getSupportActionBar().setHomeButtonEnabled(true);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        mToolbarColor = getResources().getColor(R.color.primary);
+        mToolbar.setBackgroundColor(Color.TRANSPARENT);
+
         mFlexibleSpaceImageHeight = getResources().getDimensionPixelSize(R.dimen.flexible_space_image_height);
-        mFlexibleSpaceShowFabOffset = getResources().getDimensionPixelSize(R.dimen.flexible_space_show_fab_offset);
         mIntersectionHeight = getResources().getDimensionPixelSize(R.dimen.intersection_height);
         mHeaderBarHeight = getResources().getDimensionPixelSize(R.dimen.header_bar_height);
         mSlidingSlop = getResources().getDimensionPixelSize(R.dimen.sliding_slop);
@@ -236,12 +252,24 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
         ViewHelper.setTranslationY(mImageView, imageTranslationY);
 
         // Show/hide FAB
-        if (mFab != null) {
-            if (ViewHelper.getTranslationY(mInterceptionLayout) < mFlexibleSpaceImageHeight) {
-                hideFab();
-            } else {
-                showFab();
-            }
+        if (ViewHelper.getTranslationY(mInterceptionLayout) < mFlexibleSpaceImageHeight) {
+            hideFab();
+        } else {
+            ViewPropertyAnimator.animate(mToolbar).scaleY(0).setDuration(200).start();
+            showFab();
+        }
+        if (ViewHelper.getTranslationY(mInterceptionLayout) <= mFlexibleSpaceImageHeight) {
+            ViewPropertyAnimator.animate(mToolbar).scaleY(1).setDuration(200).start();
+            setBackgroundAlpha(mToolbar, 0, mToolbarColor);
+        }
+
+        if(ViewHelper.getTranslationY(mInterceptionLayout) <= (mToolbar.getHeight())) {
+            ViewPropertyAnimator.animate(mTitle).scaleY(0).start();
+            getSupportActionBar().setTitle(mTitle.getText());
+        }
+        else {
+            ViewPropertyAnimator.animate(mTitle).scaleY(1).start();
+            getSupportActionBar().setTitle(null);
         }
     }
 
@@ -282,7 +310,7 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
     }
 
     private void showFab() {
-        if (!mFabIsShown) {
+        if (!mFabIsShown && mFab != null) {
             ViewPropertyAnimator.animate(mFab).cancel();
             ViewPropertyAnimator.animate(mFab).scaleX(1).scaleY(1).setDuration(200).start();
             mFabIsShown = true;
@@ -290,10 +318,17 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends Action
     }
 
     private void hideFab() {
-        if (mFabIsShown) {
+        if (mFabIsShown && mFab != null) {
             ViewPropertyAnimator.animate(mFab).cancel();
             ViewPropertyAnimator.animate(mFab).scaleX(0).scaleY(0).setDuration(200).start();
             mFabIsShown = false;
         }
     }
+
+    private void setBackgroundAlpha(View view, float alpha, int baseColor) {
+        int a = Math.min(255, Math.max(0, (int) (alpha * 255))) << 24;
+        int rgb = 0x00ffffff & baseColor;
+        view.setBackgroundColor(a + rgb);
+    }
+
 }
