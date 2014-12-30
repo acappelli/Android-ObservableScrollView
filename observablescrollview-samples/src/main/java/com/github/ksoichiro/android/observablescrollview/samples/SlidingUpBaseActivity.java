@@ -16,16 +16,10 @@
 
 package com.github.ksoichiro.android.observablescrollview.samples;
 
-import android.annotation.TargetApi;
-import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Rect;
-import android.graphics.drawable.ColorDrawable;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -44,7 +38,10 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
 
     private View mHeader;
     private View mHeaderBar;
+    private View mHeaderOverlay;
+    private View mHeaderFlexibleSpace;
     private TextView mTitle;
+    private TextView mToolbarTitle;
     private View mImageView;
     private View mFab;
     private Toolbar mToolbar;
@@ -54,6 +51,8 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
     private int mIntersectionHeight;
     private int mHeaderBarHeight;
     private int mSlidingSlop;
+    private int mSlidingHeaderBlueSize;
+    private int mColorPrimary;
     private float mScrollYOnDownMotion;
     private boolean mMoved;
     private float mInitialY;
@@ -62,7 +61,10 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
     private boolean mFabIsShown;
     private int mFlexibleSpaceImageHeight;
     private int mToolbarColor;
-    private boolean mHeaderColorChanging;
+
+    // These flags are used for changing header colors.
+    private boolean mHeaderColorIsChanging;
+    private boolean mHeaderColorChangedToBottom;
     private boolean mHeaderIsAtBottom;
     private boolean mHeaderIsNotAtBottom;
 
@@ -77,18 +79,24 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
         ViewHelper.setScaleY(mToolbar, 0);
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setTitle("");
 
         mToolbarColor = getResources().getColor(R.color.primary);
         mToolbar.setBackgroundColor(Color.TRANSPARENT);
+        mToolbar.setTitle("");
 
         mFlexibleSpaceImageHeight = getResources().getDimensionPixelSize(R.dimen.flexible_space_image_height);
         mIntersectionHeight = getResources().getDimensionPixelSize(R.dimen.intersection_height);
         mHeaderBarHeight = getResources().getDimensionPixelSize(R.dimen.header_bar_height);
         mSlidingSlop = getResources().getDimensionPixelSize(R.dimen.sliding_slop);
         mActionBarSize = getActionBarSize();
+        mColorPrimary = getResources().getColor(R.color.primary);
+        mSlidingHeaderBlueSize = getResources().getDimensionPixelSize(R.dimen.sliding_overlay_blur_size);
 
         mHeader = findViewById(R.id.header);
         mHeaderBar = findViewById(R.id.header_bar);
+        mHeaderOverlay = findViewById(R.id.header_overlay);
+        mHeaderFlexibleSpace = findViewById(R.id.header_flexible_space);
         mImageView = findViewById(R.id.image);
         mImageView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -106,6 +114,9 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
         mInterceptionLayout.setScrollInterceptionListener(mInterceptionListener);
         mTitle = (TextView) findViewById(R.id.title);
         mTitle.setText(getTitle());
+        mToolbarTitle = (TextView) findViewById(R.id.toolbar_title);
+        mToolbarTitle.setText(mTitle.getText());
+        ViewHelper.setAlpha(mToolbarTitle, 0);
         ViewHelper.setTranslationY(mTitle, (mHeaderBarHeight - mActionBarSize) / 2);
 
         ScrollUtils.addOnGlobalLayoutListener(mInterceptionLayout, new Runnable() {
@@ -117,12 +128,14 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
                     ViewHelper.setTranslationX(mFab, mTitle.getWidth() - mFabMargin - mFab.getWidth());
                     ViewHelper.setTranslationY(mFab, ViewHelper.getX(mTitle) - (mFab.getHeight() / 2));
                 }
-                changeHeaderBarColor();
+                changeHeaderBarColorAnimated(false);
+                changeHeaderOverlay();
             }
         });
     }
 
     protected abstract int getLayoutResId();
+
     protected abstract S createScrollable();
 
     @Override
@@ -181,49 +194,6 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
             mMoved = false;
         }
     };
-
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    private void changeHeaderBarColor() {
-        if (mHeaderColorChanging) {
-            return;
-        }
-        boolean shouldBeWhite = getAnchorYBottom() == ViewHelper.getTranslationY(mInterceptionLayout);
-        final int headerColorAtBottom = Color.WHITE;
-        int color = ((ColorDrawable) mHeaderBar.getBackground()).getColor();
-        if (!mHeaderIsAtBottom && color != headerColorAtBottom && shouldBeWhite) {
-            mHeaderIsAtBottom = true;
-            mHeaderIsNotAtBottom = false;
-            ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(100);
-            animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    float alpha = (float) animation.getAnimatedValue();
-                    mHeaderColorChanging = (alpha != 1);
-                    setBackgroundAlpha(mHeaderBar, alpha, headerColorAtBottom);
-
-                    int level = Math.min(255, Math.max(0, (int) ((1 - alpha) * 255)));
-                    mTitle.setTextColor(0xff000000 + (0x010101 * level));
-                }
-            });
-            animator.start();
-        } else if (!mHeaderIsNotAtBottom && !shouldBeWhite) {
-            mHeaderIsAtBottom = false;
-            mHeaderIsNotAtBottom = true;
-            ValueAnimator animator = ValueAnimator.ofFloat(1, 0).setDuration(100);
-            animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                @Override
-                public void onAnimationUpdate(ValueAnimator animation) {
-                    float alpha = (float) animation.getAnimatedValue();
-                    mHeaderColorChanging = (alpha != 0);
-                    setBackgroundAlpha(mHeaderBar, alpha, headerColorAtBottom);
-
-                    int level = Math.min(255, Math.max(0, (int) ((1 - alpha) * 255)));
-                    mTitle.setTextColor(0xff000000 + (0x010101 * level));
-                }
-            });
-            animator.start();
-        }
-    }
 
     private void slideOnClick() {
         float translationY = ViewHelper.getTranslationY(mInterceptionLayout);
@@ -301,17 +271,12 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
         }
         if (ViewHelper.getTranslationY(mInterceptionLayout) <= mFlexibleSpaceImageHeight) {
             ViewPropertyAnimator.animate(mToolbar).scaleY(1).setDuration(200).start();
-            setBackgroundAlpha(mToolbar, 0, mToolbarColor);
+            mToolbar.setBackgroundColor(ScrollUtils.getColorWithAlpha(0, mToolbarColor));
         }
 
-        if (ViewHelper.getTranslationY(mInterceptionLayout) <= (mToolbar.getHeight())) {
-            ViewPropertyAnimator.animate(mTitle).scaleY(0).start();
-            getSupportActionBar().setTitle(mTitle.getText());
-        } else {
-            ViewPropertyAnimator.animate(mTitle).scaleY(1).start();
-            getSupportActionBar().setTitle(null);
-        }
-        changeHeaderBarColor();
+        changeToolbarTitleVisibility();
+        changeHeaderBarColorAnimated(true);
+        changeHeaderOverlay();
     }
 
     private void slideWithAnimation(float toY) {
@@ -328,12 +293,78 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
         }
     }
 
-    private float getAnchorYBottom() {
-        return getScreenHeight() - mHeaderBarHeight;
+    private void changeToolbarTitleVisibility() {
+        if (ViewHelper.getTranslationY(mInterceptionLayout) <= mIntersectionHeight) {
+            if (ViewHelper.getAlpha(mToolbarTitle) == 0) {
+                ViewPropertyAnimator.animate(mToolbarTitle).cancel();
+                ViewPropertyAnimator.animate(mToolbarTitle).alpha(1).setDuration(200).start();
+            }
+        } else if (ViewHelper.getAlpha(mToolbarTitle) == 1) {
+            ViewPropertyAnimator.animate(mToolbarTitle).cancel();
+            ViewPropertyAnimator.animate(mToolbarTitle).alpha(0).setDuration(200).start();
+        } else {
+            ViewHelper.setAlpha(mToolbarTitle, 0);
+        }
     }
 
-    private float getAnchorYImage() {
-        return mImageView.getHeight();
+    private void changeHeaderBarColorAnimated(boolean animated) {
+        if (mHeaderColorIsChanging) {
+            return;
+        }
+        boolean shouldBeWhite = getAnchorYBottom() == ViewHelper.getTranslationY(mInterceptionLayout);
+        if (!mHeaderIsAtBottom && !mHeaderColorChangedToBottom && shouldBeWhite) {
+            mHeaderIsAtBottom = true;
+            mHeaderIsNotAtBottom = false;
+            if (animated) {
+                ValueAnimator animator = ValueAnimator.ofFloat(0, 1).setDuration(100);
+                animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator animation) {
+                        float alpha = (float) animation.getAnimatedValue();
+                        mHeaderColorIsChanging = (alpha != 1);
+                        changeHeaderBarColor(alpha);
+                    }
+                });
+                animator.start();
+            } else {
+                changeHeaderBarColor(1);
+            }
+        } else if (!mHeaderIsNotAtBottom && !shouldBeWhite) {
+            mHeaderIsAtBottom = false;
+            mHeaderIsNotAtBottom = true;
+            if (animated) {
+                ValueAnimator animator = ValueAnimator.ofFloat(1, 0).setDuration(100);
+                animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator animation) {
+                        float alpha = (float) animation.getAnimatedValue();
+                        mHeaderColorIsChanging = (alpha != 0);
+                        changeHeaderBarColor(alpha);
+                    }
+                });
+                animator.start();
+            } else {
+                changeHeaderBarColor(0);
+            }
+        }
+    }
+
+    private void changeHeaderBarColor(float alpha) {
+        mHeaderBar.setBackgroundColor(ScrollUtils.mixColors(mColorPrimary, Color.WHITE, alpha));
+        mTitle.setTextColor(ScrollUtils.mixColors(Color.WHITE, Color.BLACK, alpha));
+        mHeaderColorChangedToBottom = (alpha == 1);
+    }
+
+    private void changeHeaderOverlay() {
+        final float translationY = ViewHelper.getTranslationY(mInterceptionLayout);
+        if (translationY <= mToolbar.getHeight() - mSlidingHeaderBlueSize) {
+            mHeaderOverlay.setVisibility(View.VISIBLE);
+            mHeaderFlexibleSpace.getLayoutParams().height = (int) (mToolbar.getHeight() - mSlidingHeaderBlueSize - translationY);
+            mHeaderFlexibleSpace.requestLayout();
+            mHeaderOverlay.requestLayout();
+        } else {
+            mHeaderOverlay.setVisibility(View.INVISIBLE);
+        }
     }
 
     private void showFab() {
@@ -352,9 +383,11 @@ public abstract class SlidingUpBaseActivity<S extends Scrollable> extends BaseAc
         }
     }
 
-    private void setBackgroundAlpha(View view, float alpha, int baseColor) {
-        int a = Math.min(255, Math.max(0, (int) (alpha * 255))) << 24;
-        int rgb = 0x00ffffff & baseColor;
-        view.setBackgroundColor(a + rgb);
+    private float getAnchorYBottom() {
+        return getScreenHeight() - mHeaderBarHeight;
+    }
+
+    private float getAnchorYImage() {
+        return mImageView.getHeight();
     }
 }
