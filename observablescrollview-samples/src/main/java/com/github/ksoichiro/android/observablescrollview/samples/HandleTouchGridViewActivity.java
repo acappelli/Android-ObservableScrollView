@@ -18,7 +18,6 @@ package com.github.ksoichiro.android.observablescrollview.samples;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,11 +25,9 @@ import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import com.github.ksoichiro.android.observablescrollview.ObservableGridView;
-import com.github.ksoichiro.android.observablescrollview.ObservableListView;
 import com.github.ksoichiro.android.observablescrollview.ObservableScrollViewCallbacks;
 import com.github.ksoichiro.android.observablescrollview.ScrollState;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -44,7 +41,7 @@ import java.util.List;
  * <p/>
  * https://github.com/ksoichiro/Android-ObservableScrollView/issues/18
  */
-public class HandleTouchGridViewActivity extends ActionBarActivity implements ObservableScrollViewCallbacks {
+public class HandleTouchGridViewActivity extends BaseActivity implements ObservableScrollViewCallbacks {
     private static final String TAG = HandleTouchGridViewActivity.class.getSimpleName();
 
     @Override
@@ -54,11 +51,7 @@ public class HandleTouchGridViewActivity extends ActionBarActivity implements Ob
 
         ObservableGridView gridView = (ObservableGridView) findViewById(R.id.scroll);
         gridView.setScrollViewCallbacks(this);
-        List<String> items = new ArrayList<String>();
-        for (int i = 1; i <= 100; i++) {
-            items.add("Item " + i);
-        }
-        gridView.setAdapter(new CustomAdapter(this, items));
+        gridView.setAdapter(new CustomAdapter(this, getDummyData()));
     }
 
     @Override

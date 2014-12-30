@@ -39,7 +39,7 @@ dependencies {
 
 android {
     compileSdkVersion 21
-    buildToolsVersion "21.1.1"
+    buildToolsVersion "21.1.2"
 
     defaultConfig {
         applicationId "com.github.ksoichiro.android.observablescrollview.samples"
@@ -101,6 +101,7 @@ android {
 
     lintOptions {
         abortOnError false
+        ignoreWarnings true
     }
 
     // Rename APK files

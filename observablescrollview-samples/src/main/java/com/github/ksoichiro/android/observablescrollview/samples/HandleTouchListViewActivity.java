@@ -18,7 +18,6 @@ package com.github.ksoichiro.android.observablescrollview.samples;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,7 +28,6 @@ import com.github.ksoichiro.android.observablescrollview.ObservableListView;
 import com.github.ksoichiro.android.observablescrollview.ObservableScrollViewCallbacks;
 import com.github.ksoichiro.android.observablescrollview.ScrollState;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,7 +41,7 @@ import java.util.List;
  * <p/>
  * https://github.com/ksoichiro/Android-ObservableScrollView/issues/18
  */
-public class HandleTouchListViewActivity extends ActionBarActivity implements ObservableScrollViewCallbacks {
+public class HandleTouchListViewActivity extends BaseActivity implements ObservableScrollViewCallbacks {
     private static final String TAG = HandleTouchListViewActivity.class.getSimpleName();
 
     @Override
@@ -53,11 +51,7 @@ public class HandleTouchListViewActivity extends ActionBarActivity implements Ob
 
         ObservableListView listView = (ObservableListView) findViewById(R.id.scroll);
         listView.setScrollViewCallbacks(this);
-        List<String> items = new ArrayList<String>();
-        for (int i = 1; i <= 100; i++) {
-            items.add("Item " + i);
-        }
-        listView.setAdapter(new CustomAdapter(this, items));
+        listView.setAdapter(new CustomAdapter(this, getDummyData()));
     }
 
     @Override

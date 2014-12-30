@@ -1,3 +1,6 @@
+apply plugin: 'com.android.library'
+apply plugin: 'bintray-release'
+
 buildscript {
     repositories {
         mavenCentral()
@@ -7,23 +10,46 @@ buildscript {
     }
 }
 
-apply plugin: 'com.android.library'
-
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile 'com.android.support:recyclerview-v7:21.0.0'
+    compile 'com.android.support:recyclerview-v7:21.0.3'
+}
+
+configurations {
+    compile.exclude module: 'observablescrollview-samples'
 }
 
 android {
     compileSdkVersion 21
-    buildToolsVersion "21.1.1"
+    buildToolsVersion "21.1.2"
 
     defaultConfig {
         minSdkVersion 9
     }
+
+    lintOptions {
+        abortOnError false
+        ignoreWarnings true
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+        debug{
+            debuggable false
+        }
+    }
 }
 
-apply from: 'https://raw.githubusercontent.com/chrisbanes/gradle-mvn-push/master/gradle-mvn-push.gradle'
+publish {
+    userOrg = 'acappelli'
+    groupId = 'com.acappelli'
+    artifactId = 'ObservableScrollView'
+    version = '1.4.0-SNAPSHOT'
+}

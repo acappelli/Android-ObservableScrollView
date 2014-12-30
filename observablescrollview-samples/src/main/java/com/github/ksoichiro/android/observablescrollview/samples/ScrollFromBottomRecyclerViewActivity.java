@@ -16,23 +16,19 @@
 
 package com.github.ksoichiro.android.observablescrollview.samples;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.view.ViewCompat;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewTreeObserver;
 
 import com.github.ksoichiro.android.observablescrollview.ObservableRecyclerView;
 import com.github.ksoichiro.android.observablescrollview.ObservableScrollViewCallbacks;
 import com.github.ksoichiro.android.observablescrollview.ScrollState;
+import com.github.ksoichiro.android.observablescrollview.ScrollUtils;
 import com.nineoldandroids.view.ViewHelper;
 import com.nineoldandroids.view.ViewPropertyAnimator;
-
-import java.util.ArrayList;
 
 /**
  * This is a sample of using RecyclerView that scrolls from the bottom.
@@ -42,7 +38,7 @@ import java.util.ArrayList;
  * Please don't submit it as a new issue.
  * (Pull request to fix this is greatly appreciated!)
  */
-public class ScrollFromBottomRecyclerViewActivity extends ActionBarActivity implements ObservableScrollViewCallbacks {
+public class ScrollFromBottomRecyclerViewActivity extends BaseActivity implements ObservableScrollViewCallbacks {
 
     private View mHeaderView;
     private View mToolbarView;
@@ -64,23 +60,12 @@ public class ScrollFromBottomRecyclerViewActivity extends ActionBarActivity impl
         mRecyclerView.setScrollViewCallbacks(this);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setHasFixedSize(false);
-
-        ArrayList<String> items = new ArrayList<String>();
-        for (int i = 1; i <= 100; i++) {
-            items.add("Item " + i);
-        }
         View headerView = LayoutInflater.from(this).inflate(R.layout.recycler_header, null);
-        mRecyclerView.setAdapter(new SimpleHeaderRecyclerAdapter(this, items, headerView));
+        setDummyDataWithHeader(mRecyclerView, headerView);
 
-        ViewTreeObserver vto = mRecyclerView.getViewTreeObserver();
-        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+        ScrollUtils.addOnGlobalLayoutListener(mRecyclerView, new Runnable() {
             @Override
-            public void onGlobalLayout() {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                    mRecyclerView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-                } else {
-                    mRecyclerView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                }
+            public void run() {
                 int count = mRecyclerView.getAdapter().getItemCount() - 1;
                 int position = count == 0 ? 1 : count > 0 ? count : 0;
                 mRecyclerView.scrollToPosition(position);
@@ -98,7 +83,7 @@ public class ScrollFromBottomRecyclerViewActivity extends ActionBarActivity impl
                     mBaseTranslationY = scrollY;
                 }
             }
-            int headerTranslationY = Math.min(0, Math.max(-toolbarHeight, -(scrollY - mBaseTranslationY)));
+            float headerTranslationY = ScrollUtils.getFloat(-(scrollY - mBaseTranslationY), -toolbarHeight, 0);
             ViewPropertyAnimator.animate(mHeaderView).cancel();
             ViewHelper.setTranslationY(mHeaderView, headerTranslationY);
         }

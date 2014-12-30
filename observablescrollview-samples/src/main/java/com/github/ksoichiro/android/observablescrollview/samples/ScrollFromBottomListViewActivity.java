@@ -16,24 +16,18 @@
 
 package com.github.ksoichiro.android.observablescrollview.samples;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.view.ViewCompat;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewTreeObserver;
-import android.widget.ArrayAdapter;
 
 import com.github.ksoichiro.android.observablescrollview.ObservableListView;
 import com.github.ksoichiro.android.observablescrollview.ObservableScrollViewCallbacks;
 import com.github.ksoichiro.android.observablescrollview.ScrollState;
+import com.github.ksoichiro.android.observablescrollview.ScrollUtils;
 import com.nineoldandroids.view.ViewHelper;
 import com.nineoldandroids.view.ViewPropertyAnimator;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This is a sample of using ListView that scrolls from the bottom.
@@ -44,7 +38,7 @@ import java.util.List;
  * See the discussion below for details:
  * https://github.com/ksoichiro/Android-ObservableScrollView/issues/3
  */
-public class ScrollFromBottomListViewActivity extends ActionBarActivity implements ObservableScrollViewCallbacks {
+public class ScrollFromBottomListViewActivity extends BaseActivity implements ObservableScrollViewCallbacks {
 
     private View mHeaderView;
     private View mToolbarView;
@@ -68,21 +62,11 @@ public class ScrollFromBottomListViewActivity extends ActionBarActivity implemen
         LayoutInflater inflater = LayoutInflater.from(this);
         mListView.addHeaderView(inflater.inflate(R.layout.padding, mListView, false)); // toolbar
         mListView.addHeaderView(inflater.inflate(R.layout.padding, mListView, false)); // sticky view
-        List<String> items = new ArrayList<String>();
-        for (int i = 1; i <= 100; i++) {
-            items.add("Item " + i);
-        }
-        mListView.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, items));
+        setDummyData(mListView);
 
-        ViewTreeObserver vto = mListView.getViewTreeObserver();
-        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+        ScrollUtils.addOnGlobalLayoutListener(mListView, new Runnable() {
             @Override
-            public void onGlobalLayout() {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                    mListView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-                } else {
-                    mListView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                }
+            public void run() {
                 int count = mListView.getAdapter().getCount() - 1;
                 int position = count == 0 ? 1 : count > 0 ? count : 0;
                 mListView.smoothScrollToPosition(position);
@@ -101,7 +85,7 @@ public class ScrollFromBottomListViewActivity extends ActionBarActivity implemen
                     mBaseTranslationY = scrollY;
                 }
             }
-            int headerTranslationY = Math.min(0, Math.max(-toolbarHeight, -(scrollY - mBaseTranslationY)));
+            float headerTranslationY = ScrollUtils.getFloat(-(scrollY - mBaseTranslationY), -toolbarHeight, 0);
             ViewPropertyAnimator.animate(mHeaderView).cancel();
             ViewHelper.setTranslationY(mHeaderView, headerTranslationY);
         }

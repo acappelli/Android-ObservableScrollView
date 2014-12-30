@@ -16,17 +16,14 @@
 
 package com.github.ksoichiro.android.observablescrollview.samples;
 
-import android.content.res.TypedArray;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.SparseArray;
-import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -35,6 +32,7 @@ import android.widget.FrameLayout;
 
 import com.github.ksoichiro.android.observablescrollview.ObservableScrollViewCallbacks;
 import com.github.ksoichiro.android.observablescrollview.ScrollState;
+import com.github.ksoichiro.android.observablescrollview.ScrollUtils;
 import com.github.ksoichiro.android.observablescrollview.Scrollable;
 import com.github.ksoichiro.android.observablescrollview.TouchInterceptionFrameLayout;
 import com.google.samples.apps.iosched.ui.widget.SlidingTabLayout;
@@ -48,7 +46,7 @@ import com.nineoldandroids.view.ViewHelper;
  * SlidingTabLayout and SlidingTabStrip are from google/iosched:
  * https://github.com/google/iosched
  */
-public class ViewPagerTab2Activity extends ActionBarActivity implements ObservableScrollViewCallbacks {
+public class ViewPagerTab2Activity extends BaseActivity implements ObservableScrollViewCallbacks {
 
     private View mToolbarView;
     private TouchInterceptionFrameLayout mInterceptionLayout;
@@ -69,9 +67,11 @@ public class ViewPagerTab2Activity extends ActionBarActivity implements Observab
         mToolbarView = findViewById(R.id.toolbar);
         mPagerAdapter = new NavigationAdapter(getSupportFragmentManager());
         mPager = (ViewPager) findViewById(R.id.pager);
-        final int tabHeight = getResources().getDimensionPixelSize(R.dimen.tab_height);
-        mPager.setPadding(0, getActionBarSize() + tabHeight, 0, 0);
         mPager.setAdapter(mPagerAdapter);
+        // Padding for ViewPager must be set outside the ViewPager itself
+        // because with padding, EdgeEffect of ViewPager become strange.
+        final int tabHeight = getResources().getDimensionPixelSize(R.dimen.tab_height);
+        findViewById(R.id.pager_wrapper).setPadding(0, getActionBarSize() + tabHeight, 0, 0);
 
         SlidingTabLayout slidingTabLayout = (SlidingTabLayout) findViewById(R.id.sliding_tabs);
         slidingTabLayout.setCustomTabView(R.layout.tab_indicator, android.R.id.text1);
@@ -145,7 +145,7 @@ public class ViewPagerTab2Activity extends ActionBarActivity implements Observab
 
         @Override
         public void onMoveMotionEvent(MotionEvent ev, float diffX, float diffY) {
-            float translationY = Math.min(0, Math.max(-mToolbarView.getHeight(), ViewHelper.getTranslationY(mInterceptionLayout) + diffY));
+            float translationY = ScrollUtils.getFloat(ViewHelper.getTranslationY(mInterceptionLayout) + diffY, -mToolbarView.getHeight(), 0);
             ViewHelper.setTranslationY(mInterceptionLayout, translationY);
             if (translationY < 0) {
                 FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) mInterceptionLayout.getLayoutParams();
@@ -233,20 +233,6 @@ public class ViewPagerTab2Activity extends ActionBarActivity implements Observab
             });
             animator.start();
         }
-    }
-
-    private int getActionBarSize() {
-        TypedValue typedValue = new TypedValue();
-        int[] textSizeAttr = new int[]{R.attr.actionBarSize};
-        int indexOfAttrTextSize = 0;
-        TypedArray a = obtainStyledAttributes(typedValue.data, textSizeAttr);
-        int actionBarSize = a.getDimensionPixelSize(indexOfAttrTextSize, -1);
-        a.recycle();
-        return actionBarSize;
-    }
-
-    private int getScreenHeight() {
-        return findViewById(android.R.id.content).getHeight();
     }
 
     /**
